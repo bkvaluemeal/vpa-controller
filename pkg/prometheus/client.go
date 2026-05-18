@@ -2,6 +2,7 @@ package prometheus
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 )
+
+var ErrNoResults = errors.New("query returned no results")
 
 type Client interface {
 	Query(ctx context.Context, query string) (int64, error)
@@ -44,11 +47,24 @@ func (c *prometheusClient) Query(ctx context.Context, query string) (total int64
 	case result.Type() == model.ValVector:
 		vector := result.(model.Vector)
 		if len(vector) == 0 {
-			return 0, fmt.Errorf("query returned no results")
+			return 0, ErrNoResults
 		}
-		
+
 		for _, sample := range vector {
 			total += int64(sample.Value)
+		}
+		return total, nil
+
+	case result.Type() == model.ValMatrix:
+		matrix := result.(model.Matrix)
+		if len(matrix) == 0 {
+			return 0, ErrNoResults
+		}
+
+		for _, series := range matrix {
+			for _, sample := range series.Values {
+				total += int64(sample.Value)
+			}
 		}
 		return total, nil
 

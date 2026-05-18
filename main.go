@@ -57,6 +57,11 @@ func main() {
 		annotationPrefix = "vpa.prometheus.io"
 	}
 
+	defaultRangeVector := os.Getenv("DEFAULT_RANGE_VECTOR")
+	if defaultRangeVector == "" {
+		defaultRangeVector = "1h"
+	}
+
 	workersStr := os.Getenv("CONTROLLER_WORKERS")
 	workers := 1
 	if workersStr != "" {
@@ -87,12 +92,13 @@ func main() {
 	}
 
 	if err = (&controller.VPAReconciler{
-		Client:           mgr.GetClient(),
-		Log:              ctrl.Log.WithName("controllers").WithName("VPA"),
-		Scheme:           mgr.GetScheme(),
-		Recorder:         mgr.GetEventRecorderFor("vpa-controller"),
-		PrometheusClient: promClient,
-		AnnotationPrefix: annotationPrefix,
+		Client:             mgr.GetClient(),
+		Log:                ctrl.Log.WithName("controllers").WithName("VPA"),
+		Scheme:             mgr.GetScheme(),
+		Recorder:           mgr.GetEventRecorderFor("vpa-controller"),
+		PrometheusClient:   promClient,
+		AnnotationPrefix:   annotationPrefix,
+		DefaultRangeVector: defaultRangeVector,
 	}).SetupWithManager(mgr, workers); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VPA")
 		os.Exit(1)
